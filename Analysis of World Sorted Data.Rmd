@@ -1,0 +1,141 @@
+---
+title: "Top 15 Countries Banana Production 2024"
+author: "Vinay Sanjay Patil"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r}
+# Load packages
+library(tidyr)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(scales)
+data = read_excel("D:/Project/Sem-IV/Datasets/World Sorted_Banana_Production_Data_.xlsx")
+str(data)
+
+# Remove Source column if present
+data <- data[, !names(data) %in% "Source"]
+
+# Rename country column
+colnames(data)[1] <- "Country"
+
+data[-1] <- lapply(data[-1], as.numeric)
+
+data_long <- data %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Production")
+
+# Convert Year to numeric
+data_long$Year <- as.numeric(data_long$Year)
+
+# Convert production to Million Metric Tons (MMT)
+data_long$Production_MMT <- data_long$Production / 1000000
+
+head(data_long)
+
+ggplot(data_long, aes(x = Year,
+                      y = Production_MMT,
+                      color = Country,
+                      group = Country)) +
+  
+  geom_line(linewidth = 0.8) +
+  
+  labs(title = "Year-wise Banana Production of Each Country (2000–2024)",
+       x = "Year",
+       y = "Production (Million Metric Tons)") +
+  
+  theme_minimal()
+
+# Find top 10 countries based on 2024
+top10 <- data_long %>%
+  filter(Year == 2024) %>%
+  arrange(desc(Production_MMT)) %>%
+  slice(1:10) %>%
+  pull(Country)
+
+# Filter only top 10
+data_top10 <- data_long %>%
+  filter(Country %in% top10)
+
+# Plot
+ggplot(data_top10, aes(x = Year,
+                       y = Production_MMT,
+                       color = Country)) +
+  
+  geom_line(linewidth = 1) +
+  
+  labs(title = "Year-wise Banana Production (Top 10 Countries)",
+       x = "Year",
+       y = "Production (MMT)") +
+  
+  theme_minimal()
+
+global_ts <- data_long %>%
+  group_by(Year) %>%
+  summarise(Global_Production = sum(Production_MMT, na.rm = TRUE))
+
+ggplot(global_ts, aes(x = Year,
+                      y = Global_Production)) +
+  
+  geom_line(color = "blue", linewidth = 1.2) +
+  
+  geom_point(color = "red") +
+  
+  labs(title = "Global Banana Production Time Series (2000–2024)",
+       x = "Year",
+       y = "Global Production (Million Metric Tons)") +
+  
+  theme_minimal()
+
+india_ts <- data_long %>%
+  filter(Country == "India")
+
+ggplot(india_ts, aes(x = Year,
+                     y = Production_MMT)) +
+  
+  geom_line(color = "darkgreen", linewidth = 1.2) +
+  
+  geom_point() +
+  
+  labs(title = "Time Series of Banana Production – India (2000–2024)",
+       x = "Year",
+       y = "Production (MMT)") +
+  
+  theme_minimal()
+```
+
+```{r}
+top50 <- data_2024[1:50, ]
+
+ggplot(top50, aes(x = reorder(Country, -Production_MMT))) +
+  
+  geom_bar(stat = "identity",
+           aes(y = Production_MMT),
+           fill = "darkgreen") +
+  
+  geom_line(aes(y = CumPercent * max(Production_MMT) / 100,
+                group = 1),
+            color = "red",
+            linewidth = 1.2) +
+  
+  scale_y_continuous(
+    sec.axis = sec_axis(~ . / max(top50$Production_MMT) * 100,
+                        name = "Cumulative Percentage (%)")
+  ) +
+  
+  labs(title = "Pareto Chart of Top 50 Banana Producing Countries (2024)",
+       x = "Country",
+       y = "Production (MMT)") +
+  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, size = 7))
+
+ggsave("Pareto_Banana_Production_2024.png",
+       width = 12,
+       height = 7,
+       dpi = 300)
+
+```
+
+
